@@ -237,11 +237,51 @@ FROM MailOrderManager.dbo.CUST c /* Primary MOM DB */
 JOIN momscripts.dbo.MomCustSanitized s ON c.CUSTNUM = s.CustomerID /* Sanitized data for addresses */
 WHERE 
 	/* ((c.FIRSTNAME != '' AND c.LASTNAME != '') OR c.COMPANY != '') AND */ /* No first name, last name and/or no company name */
+
+	/* CUSTNUMs with no references at all */
+	(
+		SELECT
+			COUNT(d.CUSTNUM)
+		FROM
+			[MailOrderManager].[dbo].[CUSTRELA] d
+		WHERE
+			d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+	) = 0
+	
+	OR
+	
 	/* ONLY pull original accounts, cross-referencing CUSTRELA and filtering out the rest with cust.BELONGNUM */
 	(
-		SELECT COUNT(d.BELONGNUM)
+		SELECT
+			/* Fetch overall smallest number - Relationships to 0 will cause this to fail */
+			CASE WHEN (MIN(d.CUSTNUM) IS NULL) AND (MIN(d.BELONGNUM) IS NULL)
+				THEN c.CUSTNUM
+				ELSE (
+					CASE WHEN (
+						CASE WHEN MIN(d.CUSTNUM) IS NULL
+							THEN 100000
+							ELSE MIN(d.CUSTNUM)
+							END
+						) <= (
+						CASE WHEN MIN(d.BELONGNUM) IS NULL
+							THEN 100000
+							ELSE MIN(d.BELONGNUM)
+							END
+						)
+					THEN MIN(d.CUSTNUM)
+					ELSE MIN(d.BELONGNUM)
+					END
+				) END
+		FROM
+			[MailOrderManager].[dbo].[CUSTRELA] d
+		WHERE
+			d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+		GROUP BY
+			c.CUSTNUM
+
+		/*SELECT COUNT(d.BELONGNUM)
 		FROM MailOrderManager.dbo.CUSTRELA d
-		WHERE d.BELONGNUM = c.CUSTNUM
-	) = 0
-	AND c.BELONGNUM = 0
+		WHERE d.BELONGNUM = c.CUSTNUM*/
+	) = c.CUSTNUM
+	/*AND c.BELONGNUM = 0*/
 ORDER BY c.CUSTNUM ASC
