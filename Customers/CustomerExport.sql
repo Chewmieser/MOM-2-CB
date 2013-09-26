@@ -118,11 +118,92 @@ SELECT
 	NULL AS 'WebUserName',
 	NULL AS 'WebPassword',
 	NULL AS 'Pricing',
-	c.CREDIT_LIM AS 'CreditLimit',
-	c.AR_BALANCE AS 'Credit',
+	
+	/* Merge sub-account credit limit */
+	(
+		SELECT
+			SUM(v.CREDIT_LIM)
+		FROM
+			(
+				SELECT DISTINCT
+					/* Keeps distinct check */
+					CASE WHEN d.CUSTNUM = c.CUSTNUM
+						THEN d.BELONGNUM
+						ELSE d.CUSTNUM
+						END AS NUM,
+					a.CREDIT_LIM
+				FROM
+					[MailOrderManager].[dbo].[CUSTRELA] d JOIN
+					[MailOrderManager].[dbo].[CUST] a ON (CASE WHEN d.CUSTNUM = c.CUSTNUM THEN d.BELONGNUM ELSE d.CUSTNUM END) = a.CUSTNUM
+				WHERE
+					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+			) v
+	) + c.CREDIT_LIM AS 'CreditLimit',
+	
+	/* Merge sub-account credit */
+	(
+		SELECT
+			SUM(v.AR_BALANCE)
+		FROM
+			(
+				SELECT DISTINCT
+					/* Keeps distinct check */
+					CASE WHEN d.CUSTNUM = c.CUSTNUM
+						THEN d.BELONGNUM
+						ELSE d.CUSTNUM
+						END AS NUM,
+					a.AR_BALANCE
+				FROM
+					[MailOrderManager].[dbo].[CUSTRELA] d JOIN
+					[MailOrderManager].[dbo].[CUST] a ON (CASE WHEN d.CUSTNUM = c.CUSTNUM THEN d.BELONGNUM ELSE d.CUSTNUM END) = a.CUSTNUM
+				WHERE
+					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+			) v
+	) + c.AR_BALANCE AS 'CustomerBalance',
+	
 	0.00 AS 'PricingPercent',
-	~c.BADCHECK AS 'IsActive',
-	c.BADCHECK AS 'IsCreditHold',
+	
+	/* Merge is active */
+	CASE WHEN ((
+		SELECT
+			SUM(v.BADCHECK)
+		FROM
+			(
+				SELECT DISTINCT
+					/* Keeps distinct check */
+					CASE WHEN d.CUSTNUM = c.CUSTNUM
+						THEN d.BELONGNUM
+						ELSE d.CUSTNUM
+						END AS NUM,
+					CAST(a.BADCHECK AS INT) AS BADCHECK
+				FROM
+					[MailOrderManager].[dbo].[CUSTRELA] d JOIN
+					[MailOrderManager].[dbo].[CUST] a ON (CASE WHEN d.CUSTNUM = c.CUSTNUM THEN d.BELONGNUM ELSE d.CUSTNUM END) = a.CUSTNUM
+				WHERE
+					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+			) v
+	) + CAST(c.BADCHECK AS INT)) > 0 THEN 0 ELSE 1 END AS 'IsActive',
+	
+	/* Merge credit hold */
+	CASE WHEN ((
+		SELECT
+			SUM(v.BADCHECK)
+		FROM
+			(
+				SELECT DISTINCT
+					/* Keeps distinct check */
+					CASE WHEN d.CUSTNUM = c.CUSTNUM
+						THEN d.BELONGNUM
+						ELSE d.CUSTNUM
+						END AS NUM,
+					CAST(a.BADCHECK AS INT) AS BADCHECK
+				FROM
+					[MailOrderManager].[dbo].[CUSTRELA] d JOIN
+					[MailOrderManager].[dbo].[CUST] a ON (CASE WHEN d.CUSTNUM = c.CUSTNUM THEN d.BELONGNUM ELSE d.CUSTNUM END) = a.CUSTNUM
+				WHERE
+					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+			) v
+	) + CAST(c.BADCHECK AS INT)) > 0 THEN 1 ELSE 0 END AS 'IsCreditHold',
 	
 	CASE c.CUSTTYPE
 		WHEN 'P' THEN 1
@@ -189,8 +270,28 @@ SELECT
 		WHEN 'SP' THEN 'Sports'
 		ELSE NULL
 		END AS 'BusinessType',
-		
-	c.CUSTBAL AS 'CustomerBalance',
+	
+	/* Merge sub-account balance */
+	(
+		SELECT
+			SUM(v.CUSTBAL)
+		FROM
+			(
+				SELECT DISTINCT
+					/* Keeps distinct check */
+					CASE WHEN d.CUSTNUM = c.CUSTNUM
+						THEN d.BELONGNUM
+						ELSE d.CUSTNUM
+						END AS NUM,
+					a.CUSTBAL
+				FROM
+					[MailOrderManager].[dbo].[CUSTRELA] d JOIN
+					[MailOrderManager].[dbo].[CUST] a ON (CASE WHEN d.CUSTNUM = c.CUSTNUM THEN d.BELONGNUM ELSE d.CUSTNUM END) = a.CUSTNUM
+				WHERE
+					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+			) v
+	) + c.CUSTBAL AS 'Credit',
+	
 	NULL AS 'GiftRegistryGUID',
 	NULL AS 'CustomerBalanceRate',
 	0 AS 'IsFromProspect',
@@ -236,8 +337,6 @@ SELECT
 FROM MailOrderManager.dbo.CUST c /* Primary MOM DB */
 JOIN momscripts.dbo.MomCustSanitized s ON c.CUSTNUM = s.CustomerID /* Sanitized data for addresses */
 WHERE 
-	/* ((c.FIRSTNAME != '' AND c.LASTNAME != '') OR c.COMPANY != '') AND */ /* No first name, last name and/or no company name */
-
 	/* CUSTNUMs with no references at all */
 	(
 		SELECT
@@ -278,10 +377,5 @@ WHERE
 			d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
 		GROUP BY
 			c.CUSTNUM
-
-		/*SELECT COUNT(d.BELONGNUM)
-		FROM MailOrderManager.dbo.CUSTRELA d
-		WHERE d.BELONGNUM = c.CUSTNUM*/
 	) = c.CUSTNUM
-	/*AND c.BELONGNUM = 0*/
 ORDER BY c.CUSTNUM ASC
