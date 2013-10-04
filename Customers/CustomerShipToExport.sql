@@ -11,30 +11,37 @@
 SELECT
 	(
 		SELECT
-			CASE WHEN (MIN(d.CUSTNUM) IS NULL) AND (MIN(d.BELONGNUM) IS NULL)
-				THEN c.CUSTNUM
-				ELSE (
-					CASE WHEN (
-						CASE WHEN MIN(d.CUSTNUM) IS NULL
-							THEN 100000
-							ELSE MIN(d.CUSTNUM)
-							END
-						) <= (
-						CASE WHEN MIN(d.BELONGNUM) IS NULL
-							THEN 100000
+			z.CustomerCode
+		FROM
+			[CBERP\CBERPSQL].acdd.dbo.Customer z
+		WHERE
+			(
+				SELECT
+					CASE WHEN (MIN(d.CUSTNUM) IS NULL) AND (MIN(d.BELONGNUM) IS NULL)
+						THEN c.CUSTNUM
+						ELSE (
+							CASE WHEN (
+								CASE WHEN MIN(d.CUSTNUM) IS NULL
+									THEN 100000
+									ELSE MIN(d.CUSTNUM)
+									END
+								) <= (
+								CASE WHEN MIN(d.BELONGNUM) IS NULL
+									THEN 100000
+									ELSE MIN(d.BELONGNUM)
+									END
+								)
+							THEN MIN(d.CUSTNUM)
 							ELSE MIN(d.BELONGNUM)
 							END
-						)
-					THEN MIN(d.CUSTNUM)
-					ELSE MIN(d.BELONGNUM)
-					END
-				) END
-		FROM
-			[MailOrderManager].[dbo].[CUSTRELA] d
-		WHERE
-			d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-		GROUP BY
-			c.CUSTNUM
+						) END
+				FROM
+					[MailOrderManager].[dbo].[CUSTRELA] d
+				WHERE
+					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+				GROUP BY
+					c.CUSTNUM
+			) = z.CustomerLegacyCode
 	) AS 'CustomerCode',
 
 	NULL AS 'ShipToCode',
@@ -199,4 +206,14 @@ WHERE
 		GROUP BY
 			c.CUSTNUM
 	) < c.CUSTNUM
+
+	AND
+
+	(
+		c.CUSTTYPE = 'S' /* Ship-to Address */
+
+		OR
+
+		c.ADDR_TYPE = 'S' /* Ship-to Customer */
+	)
 ORDER BY c.CUSTNUM ASC
