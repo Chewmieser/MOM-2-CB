@@ -1,83 +1,3 @@
-ContactFirstName
-Type - CustomerContact
-AssignedTo
-AssistantFirstName
-AssistantLastName
-AssistantMiddleName
-AssistantPhone
-AssistantPhoneExtension
-AssistantPhoneLocalNumber
-AssistantSalutationCode
-AssistantSuffixCode
-BusinessFax
-BusinessFaxExtension
-BusinessFaxLocalNumber
-BusinessPhoneExtension
-BusinessPhoneLocalNumber
-BusinessTitle
-City
-ContactLastName
-ContactMiddleName
-ContactSalutationCode
-ContactSuffixCode
-Country
-County
-DepartmentCode
-Email1
-Email2
-EmailRule
-HomeFax
-HomeFaxExtension
-HomeFaxLocalNumber
-HomePhone
-HomePhoneExtension
-HomePhoneLocalNumber
-IsActive
-IsAllowWebAccess
-ISDN
-ISDNExtension
-ISDNLocalNumber
-IsOkToCall
-IsOkToEmail
-IsOkToFax
-JobRoleCode
-LanguageCode
-ManagerCode
-Mobile
-MobileExtension
-MobileLocalNumber
-Pager
-PagerExtension
-PagerLocalNumber
-Password
-PasswordIV
-PasswordSalt
-PostalCode
-State
-SubscriptionExpirationOn
-TimeZone
-Username
-WebSiteCode
-BusinessPhone
-TemplateCodePricingImport
-ProductFilteringTemplateNamePricingImport
-ProductFilterID
-DefaultBillingCode
-DefaultShippingCode
-ContactGUID
-AddressType
-Plus4
-ContactLegacyCode
-
-
-
-
-
-
-
-
-
-
 /*
 
  +--------------------+
@@ -123,41 +43,59 @@ SELECT
 					c.CUSTNUM
 			) = z.CustomerLegacyCode
 	) AS 'EntityCode',
+	
+	CASE WHEN ltrim(rtrim(c.SALU)) LIKE ''
+		THEN NULL
+		ELSE ltrim(rtrim(c.SALU))
+		END AS 'ContactSalutationCode',
 
-	NULL AS 'ContactCode',
-'Sales No Tax' AS 'TaxCode',
-'Sales No Tax' AS 'OtherTax',
-'Sales No Tax' AS 'FreightTax',
-'DEFAULT' AS 'ShippingMethod',
-'User Entered' AS 'ShippingMethodGroup',
-'MAIN' AS 'WarehouseCode',
-NULL AS 'ContactCode',
-NULL AS 'OpenTime',
-NULL AS 'CloseTime',
-NULL AS 'SpecialInstructions',
-NULL AS 'TruckSize',
-NULL AS 'IsBookTimeDateAndBay',
-NULL AS 'RouteCode',
-NULL AS 'PaymentTermGroup',
-NULL AS 'PaymentTermCode',
+	CASE WHEN ltrim(rtrim(c.HONO)) LIKE ''
+		THEN NULL
+		ELSE ltrim(rtrim(c.HONO))
+		END AS 'ContactSuffixCode',
+	
+	/*  Convert usernames */
+	CASE c.SALES_ID /* May Change */
+		WHEN 'TZ' THEN 'tzwart'
+		WHEN 'CH' THEN 'chall'
+		WHEN 'GD' THEN 'gdownie'
+		ELSE NULL
+		END AS 'AssignedTo',
 
-CASE WHEN ltrim(rtrim(c.FIRSTNAME)) LIKE ''
-	THEN master.dbo.udf_TitleCase(ltrim(rtrim(c.COMPANY)))
-	ELSE (master.dbo.udf_TitleCase(LTRIM(RTRIM(c.FIRSTNAME))) + ' ' + master.dbo.udf_TitleCase(LTRIM(RTRIM(c.LASTNAME))))
-	END AS 'ShipToName',
+	CASE WHEN ltrim(rtrim(c.FIRSTNAME)) LIKE ''
+		THEN master.dbo.udf_TitleCase(ltrim(rtrim(c.COMPANY)))
+		ELSE (master.dbo.udf_TitleCase(LTRIM(RTRIM(c.FIRSTNAME)))
+		END AS 'ContactFirstName',
 
-/* Convert country codes into country names */
-CASE c.COUNTRY
-	WHEN 001 THEN 'United States of America'
-	ELSE NULL
-	END AS 'Country',
+	CASE WHEN ltrim(rtrim(c.LASTNAME)) LIKE ''
+		THEN NULL
+		ELSE (master.dbo.udf_TitleCase(LTRIM(RTRIM(c.LASTNAME)))
+		END AS 'ContactLastName',
 
-'Default' AS 'ClassCode',
-'USD' AS 'CurrencyCode',
-'Default' AS 'GLClassCode',
-'None' AS 'PricingMethod',
-c.CUSTNUM AS 'ShipToLegacyCode',
+	/* Convert country codes into country names */
+	CASE c.COUNTRY
+		WHEN 001 THEN 'United States of America'
+		ELSE NULL
+		END AS 'Country',
+	
+	/* Trim and nullify */
+	CASE WHEN ltrim(rtrim(c.PHONE)) LIKE '-   -' OR ltrim(rtrim(c.PHONE)) LIKE ''
+		THEN NULL
+		ELSE ltrim(rtrim(c.PHONE))
+		END AS 'BusinessPhone',
 
+	/* Trim and nullify */
+	CASE WHEN ltrim(rtrim(c.PHONE2)) LIKE '-   -' OR ltrim(rtrim(c.PHONE2)) LIKE ''
+		THEN NULL
+		ELSE ltrim(rtrim(c.PHONE2))
+		END AS 'BusinessFax',
+
+	/* Trim and nullify */
+	CASE WHEN ltrim(rtrim(c.EMAIL)) LIKE ''
+		THEN NULL
+		ELSE ltrim(rtrim(c.EMAIL))
+		END AS 'Email1',
+		
 	/* Combine address lines */
 	CASE WHEN s.DeliveryLine1 IS NULL /* Fallback to MOM data */
 		THEN CASE WHEN c.ADDR2 LIKE ''
@@ -175,74 +113,71 @@ c.CUSTNUM AS 'ShipToLegacyCode',
 			ELSE CONVERT(varchar(100), s.DeliveryLine1) + CHAR(13) + CHAR(10) + CONVERT(varchar(100), s.DeliveryLine2)
 			END
 		END AS 'Address',
+		
+	~c.NOCALL AS 'IsOkToCall',
+	~c.NOEMAIL AS 'IsOkToEmail',
+	~c.NOFAX AS 'IsOkToFax',
+	s.CITY AS 'City',
+	s.STATE AS 'State',
+	s.ZIPCode AS 'PostalCode',
+	s.CountyName AS 'County',
+	c.CUSTNUM AS 'ContactLegacyCode',
+	~c.BADCHECK AS 'IsActive',
+	s.AddonCode AS 'Plus4'
+	
+	'CustomerContact' AS 'Type',
+	'(GMT-05:00) Eastern Time (US & Canada)' AS 'TimeZone',
+	'English - United States' AS 'LanguageCode', 
 
-s.CITY AS 'City',
-s.STATE AS 'State',
-s.ZIPCode AS 'PostalCode',
-s.CountyName AS 'County',
-
-/* Trim and nullify */
-CASE WHEN ltrim(rtrim(c.PHONE)) LIKE '-   -' OR ltrim(rtrim(c.PHONE)) LIKE ''
-	THEN NULL
-	ELSE ltrim(rtrim(c.PHONE))
-	END AS 'Telephone',
-
-NULL AS 'TelephoneExtension',
-
-/* Trim and nullify */
-CASE WHEN ltrim(rtrim(c.PHONE2)) LIKE '-   -' OR ltrim(rtrim(c.PHONE2)) LIKE ''
-	THEN NULL
-	ELSE ltrim(rtrim(c.PHONE2))
-	END AS 'Fax',
-
-NULL AS 'FaxExtension',
-
-/* Trim and nullify */
-CASE WHEN ltrim(rtrim(c.EMAIL)) LIKE ''
-	THEN NULL
-	ELSE ltrim(rtrim(c.EMAIL))
-	END AS 'Email',
-
-/* Trim and nullify */
-CASE WHEN ltrim(rtrim(c.WEB)) LIKE ''
-	THEN NULL
-	ELSE ltrim(rtrim(c.WEB))
-	END AS 'Website',
-
-/* Combine comment lines - Warn for fraud */
-CASE WHEN c.COMMENT2 LIKE ''
-	THEN CASE WHEN c.BADCHECK = 1
-		THEN '[FRAUD]' + CHAR(13) + CHAR(10) + ltrim(rtrim(c.COMMENT))
-		ELSE ltrim(rtrim(c.COMMENT))
-		END
-	ELSE CASE WHEN c.BADCHECK = 1
-		THEN '[FRAUD]' + CHAR(13) + CHAR(10) + ltrim(rtrim(c.COMMENT)) + CHAR(13) + CHAR(10) + ltrim(rtrim(c.COMMENT2))
-		ELSE ltrim(rtrim(c.COMMENT)) + CHAR(13) + CHAR(10) + ltrim(rtrim(c.COMMENT2))
-		END
-	END AS 'Notes',
-
-0.00 AS 'CreditLimit',
-0.00 AS 'PricingPercent',
-~c.BADCHECK AS 'IsActive',
-c.BADCHECK AS 'IsCreditHold',
-
-1 AS 'IsAllowBackOrder',
-NULL AS 'PricingLevel',
-
-/* Convert usernames into sales rep IDs */
-CASE c.SALES_ID /* May Change */
-	WHEN 'TZ' THEN 'REP-000001'
-	WHEN 'GD' THEN 'REP-000002'
-	WHEN 'CH' THEN 'REP-000003'
-	ELSE NULL
-	END AS 'SalesRepGroupCode',
-
-'Sales Rep' AS 'Commission',
-0.00 AS 'CommissionPercent',
-NULL AS 'TaxNumber',
-NULL AS 'BusinessLicense',
-NULL AS 'AddressType',
-s.AddonCode AS 'Plus4'
+	NULL AS 'AddressType',
+	NULL AS 'BusinessPhoneExtension',
+	NULL AS 'BusinessFaxExtension',
+	NULL AS 'ContactCode',
+	NULL AS 'AssistantFirstName',
+	NULL AS 'AssistantLastName',
+	NULL AS 'AssistantMiddleName',
+	NULL AS 'AssistantPhone',
+	NULL AS 'AssistantPhoneExtension',
+	NULL AS 'AssistantPhoneLocalNumber',
+	NULL AS 'AssistantSalutationCode',
+	NULL AS 'AssistantSuffixCode',
+	NULL AS 'Mobile',
+	NULL AS 'MobileExtension',
+	NULL AS 'MobileLocalNumber',
+	NULL AS 'Pager',
+	NULL AS 'PagerExtension',
+	NULL AS 'PagerLocalNumber',
+	NULL AS 'BusinessFaxLocalNumber',
+	NULL AS 'BusinessPhoneLocalNumber',
+	NULL AS 'BusinessTitle',
+	NULL AS 'HomeFax',
+	NULL AS 'HomeFaxExtension',
+	NULL AS 'HomeFaxLocalNumber',
+	NULL AS 'HomePhone',
+	NULL AS 'HomePhoneExtension',
+	NULL AS 'HomePhoneLocalNumber',
+	NULL AS 'ISDN',
+	NULL AS 'ISDNExtension',
+	NULL AS 'ISDNLocalNumber',
+	NULL AS 'ContactMiddleName',
+	NULL AS 'Password',
+	NULL AS 'PasswordIV',
+	NULL AS 'PasswordSalt',
+	NULL AS 'Email2',
+	NULL AS 'EmailRule',
+	NULL AS 'Username',
+	NULL AS 'WebSiteCode',
+	NULL AS 'IsAllowWebAccess',
+	NULL AS 'DepartmentCode',
+	NULL AS 'JobRoleCode',
+	NULL AS 'ManagerCode',
+	NULL AS 'TemplateCodePricingImport',
+	NULL AS 'ProductFilteringTemplateNamePricingImport',
+	NULL AS 'ProductFilterID',
+	NULL AS 'DefaultBillingCode',
+	NULL AS 'DefaultShippingCode',
+	NULL AS 'ContactGUID',
+	NULL AS 'SubscriptionExpirationOn',
 FROM MailOrderManager.dbo.CUST c /* Primary MOM DB */
 JOIN momscripts.dbo.MomCustSanitized s ON c.CUSTNUM = s.CustomerID /* Sanitized data for addresses */
 WHERE 
