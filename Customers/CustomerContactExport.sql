@@ -64,12 +64,12 @@ SELECT
 
 	CASE WHEN ltrim(rtrim(c.FIRSTNAME)) LIKE ''
 		THEN master.dbo.udf_TitleCase(ltrim(rtrim(c.COMPANY)))
-		ELSE (master.dbo.udf_TitleCase(LTRIM(RTRIM(c.FIRSTNAME)))
+		ELSE master.dbo.udf_TitleCase(LTRIM(RTRIM(c.FIRSTNAME)))
 		END AS 'ContactFirstName',
 
 	CASE WHEN ltrim(rtrim(c.LASTNAME)) LIKE ''
 		THEN NULL
-		ELSE (master.dbo.udf_TitleCase(LTRIM(RTRIM(c.LASTNAME)))
+		ELSE master.dbo.udf_TitleCase(LTRIM(RTRIM(c.LASTNAME)))
 		END AS 'ContactLastName',
 
 	/* Convert country codes into country names */
@@ -123,7 +123,7 @@ SELECT
 	s.CountyName AS 'County',
 	c.CUSTNUM AS 'ContactLegacyCode',
 	~c.BADCHECK AS 'IsActive',
-	s.AddonCode AS 'Plus4'
+	s.AddonCode AS 'Plus4',
 	
 	'CustomerContact' AS 'Type',
 	'(GMT-05:00) Eastern Time (US & Canada)' AS 'TimeZone',
@@ -177,7 +177,7 @@ SELECT
 	NULL AS 'DefaultBillingCode',
 	NULL AS 'DefaultShippingCode',
 	NULL AS 'ContactGUID',
-	NULL AS 'SubscriptionExpirationOn',
+	NULL AS 'SubscriptionExpirationOn'
 FROM MailOrderManager.dbo.CUST c /* Primary MOM DB */
 JOIN momscripts.dbo.MomCustSanitized s ON c.CUSTNUM = s.CustomerID /* Sanitized data for addresses */
 WHERE 
@@ -225,10 +225,10 @@ WHERE
 	AND
 
 	(
-		c.CUSTTYPE = 'S' /* Ship-to Address */
+		c.CUSTTYPE != 'S' /* Ship-to Address */
 
-		OR
+		AND
 
-		c.ADDR_TYPE = 'S' /* Ship-to Customer */
+		c.ADDR_TYPE != 'S' /* Ship-to Customer */
 	)
 ORDER BY c.CUSTNUM ASC
