@@ -1,0 +1,11 @@
+Header
+|- Independents
+|-- Dependents
+
+Customer Export
+|- CustomerExport
+|-- CustomerShipToExport
+|-- CustomerContactExport
+
+Inventory Export
+|- InventoryExport
