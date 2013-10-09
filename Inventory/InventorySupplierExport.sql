@@ -43,10 +43,10 @@ SELECT
 			c.SupplierLegacyCode = rtrim(ltrim(s.SUPPLIER))
 	) AS 'ShipFromName',
 	
-	'' AS 'PartCode',
+	s.BUYDESC AS 'PartCode',
 	NULL AS 'ManufacturerID',
-	NULL AS 'ShortDescription',
-	NULL AS 'ExtendedDescription',
+	s.BUYDESC + CHAR(13) + CHAR(10) + s.BUYDESC2 AS 'ShortDescription',
+	s.INSTRUCT1 + CHAR(13) + CHAR(10) + s.INSTRUCT2 + CHAR(13) + CHAR(10) + s.INSTRUCT3 AS 'ExtendedDescription',
 	s.LEAD_COUNT AS 'LeadTime',
 	s.UNIT_PRICE AS 'DefaultCost',
 	s.UNIT_PRICE AS 'CurrencyCost',
