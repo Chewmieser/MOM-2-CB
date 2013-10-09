@@ -25,9 +25,9 @@ SELECT
 	i.UNCOST AS 'AverageCost',
 	
 	/* -- SKU -> MFD Translation -- */
-	CASE WHEN charindex('-',[NUMBER]) > 0
+	CASE WHEN charindex('-',i.NUMBER) > 0
 		THEN
-			CASE left([NUMBER], charindex('-', [NUMBER])-1)
+			CASE left(i.NUMBER, charindex('-', i.NUMBER)-1)
 				WHEN 'ACA' THEN 'Academy Computer Serviced'
 				WHEN 'ACL' THEN 'Ace Label'
 				WHEN 'ACR' THEN 'Acronova Technology'
@@ -135,7 +135,7 @@ SELECT
 				ELSE NULL
 			END
 		ELSE NULL
-	END AS 'NUM',
+	END AS 'ManufacturerCode',
 		
 	NULL AS 'SpecialOrderPopupName',
 	i.SERIAL AS 'SerializeLot',
