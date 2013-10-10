@@ -18,7 +18,7 @@ SELECT
 			i.ItemName = rtrim(ltrim(s.NUMBER))
 	) AS 'ItemCode',
 	
-	(ltrim(rtrim(s.NUMBER)) + ' - ' + CAST(CAST(s.QTY AS INT) AS VARCHAR)) AS 'PricingLevel',
+	('[' + CAST(CAST(s.QTY AS INT) AS VARCHAR) + '] ' + ltrim(rtrim(s.NUMBER))) AS 'PricingLevel',
 	s.NPOSITION AS 'LineNum',
 	'EACH' AS 'UnitMeasureCode',
 	'USD' AS 'CurrencyCode',
