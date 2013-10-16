@@ -1,8 +1,8 @@
 /*
 
- +---------------------------------+
- | MOM Customer Sales Order Export | MOM v6.2 -> CB 13.2
- +---------------------------------+-------------------------------+
+ +-------------------------------------+
+ | MOM Customer Sales Quotation Export | MOM v6.2 -> CB 13.2
+ +-------------------------------------+---------------------------+
  | Sanitizes and translates between MOM and CB database structures |
  +-----------------------------------------------------------------+
 
@@ -413,4 +413,4 @@ FROM
 		ON bs.CustomerID = s.CUSTNUM
 	JOIN momscripts.dbo.MomCustSanitized hs
 		ON hs.CustomerID = (CASE WHEN s.SHIPNUM = 0 THEN s.CUSTNUM ELSE s.SHIPNUM END)
-WHERE s.QUOTATION = 0
+WHERE s.QUOTATION = 1
