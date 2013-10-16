@@ -357,7 +357,7 @@ SELECT
 	NULL AS 'CBNState',
 	NULL AS 'InternalNotesCode',
 	NULL AS 'InternalNotesDescription',
-	NULL AS 'InternalNotes',
+	CAST(s.ORDERNO AS VARCHAR) AS 'InternalNotes',
 	NULL AS 'PublicNotesCode',
 	NULL AS 'StoreMerchantID_DEV000221',
 	NULL AS 'PublicNotesDescription',
