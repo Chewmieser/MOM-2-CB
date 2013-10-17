@@ -78,7 +78,7 @@ SELECT
 		END AS 'SourceCode',
 	
 	'MAIN' AS 'WarehouseCode',
-	NULL AS 'SourceSalesOrderCode',
+	s.ORDERNO AS 'SourceSalesOrderCode',
 	NULL AS 'RootDocumentCode',
 	s.ORD_DATE AS 'SalesOrderDate',
 	NULL AS 'ProjectCode',
@@ -357,7 +357,7 @@ SELECT
 	NULL AS 'CBNState',
 	NULL AS 'InternalNotesCode',
 	NULL AS 'InternalNotesDescription',
-	CAST(s.ORDERNO AS VARCHAR) AS 'InternalNotes',
+	NULL AS 'InternalNotes',
 	NULL AS 'PublicNotesCode',
 	NULL AS 'StoreMerchantID_DEV000221',
 	NULL AS 'PublicNotesDescription',
