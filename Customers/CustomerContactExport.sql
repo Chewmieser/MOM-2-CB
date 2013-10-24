@@ -13,10 +13,10 @@ SELECT
 		SELECT
 			z.CustomerCode
 		FROM
-			[CBERP\CBERPSQL].acdd.dbo.Customer z
+			acdd.dbo.Customer z
 		WHERE
 			(
-				SELECT
+				SELECT DISTINCT
 					CASE WHEN (MIN(d.CUSTNUM) IS NULL) AND (MIN(d.BELONGNUM) IS NULL)
 						THEN c.CUSTNUM
 						ELSE (
@@ -39,8 +39,13 @@ SELECT
 					[MailOrderManager].[dbo].[CUSTRELA] d
 				WHERE
 					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+					
+				/*
+				-- Omitted for SQL 2008 - Using DISTINCT --
+
 				GROUP BY
 					c.CUSTNUM
+				*/
 			) = z.CustomerLegacyCode
 	) AS 'EntityCode',
 	
@@ -195,7 +200,7 @@ WHERE
 	
 	/* CUSTNUMs that can be traced to an earlier account */
 	(
-		SELECT
+		SELECT DISTINCT
 			CASE WHEN (MIN(d.CUSTNUM) IS NULL) AND (MIN(d.BELONGNUM) IS NULL)
 				THEN c.CUSTNUM
 				ELSE (
@@ -218,8 +223,13 @@ WHERE
 			[MailOrderManager].[dbo].[CUSTRELA] d
 		WHERE
 			d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+				
+		/*
+		-- Omitted for SQL 2008 - Using DISTINCT --
+
 		GROUP BY
 			c.CUSTNUM
+		*/
 	) < c.CUSTNUM
 
 	AND

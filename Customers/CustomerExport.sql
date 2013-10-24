@@ -351,7 +351,7 @@ WHERE
 	
 	/* ONLY pull original accounts, cross-referencing CUSTRELA and filtering out the rest with cust.BELONGNUM */
 	(
-		SELECT
+		SELECT DISTINCT
 			/* Fetch overall smallest number - Relationships to 0 will cause this to fail */
 			CASE WHEN (MIN(d.CUSTNUM) IS NULL) AND (MIN(d.BELONGNUM) IS NULL)
 				THEN c.CUSTNUM
@@ -375,7 +375,12 @@ WHERE
 			[MailOrderManager].[dbo].[CUSTRELA] d
 		WHERE
 			d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
+
+		/*
+		-- Omitted for SQL 2008 - Using DISTINCT --
+		
 		GROUP BY
 			c.CUSTNUM
+		*/
 	) = c.CUSTNUM
 ORDER BY c.CUSTNUM ASC

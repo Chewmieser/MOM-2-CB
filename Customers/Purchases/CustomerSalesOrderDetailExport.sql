@@ -13,7 +13,7 @@ SELECT
 		SELECT
 			x.SalesOrderCode
 		FROM
-			[CBERP\CBERPSQL].acdd.dbo.CustomerSalesOrder x
+			acdd.dbo.CustomerSalesOrder x
 		WHERE
 			x.SourceSalesOrderCode = i.ORDERNO
 	) AS 'SalesOrderCode',
@@ -22,7 +22,7 @@ SELECT
 		SELECT
 			x.ItemCode
 		FROM
-			[CBERP\CBERPSQL].acdd.dbo.InventoryItem x
+			acdd.dbo.InventoryItem x
 		WHERE
 			x.ItemName = ltrim(rtrim(i.ITEM))
 	) AS 'ItemCode',
@@ -39,7 +39,7 @@ SalesAccountCode
 		SELECT
 			x.SalesOrderCode
 		FROM
-			[CBERP\CBERPSQL].acdd.dbo.CustomerSalesOrder x
+			acdd.dbo.CustomerSalesOrder x
 		WHERE
 			x.SourceSalesOrderCode = CAST(i.ORDERNO AS VARCHAR)
 	) AS 'RootDocumentCode',
@@ -71,8 +71,8 @@ SalesAccountCode
 		SELECT
 			d.ItemDescription
 		FROM
-			[CBERP\CBERPSQL].acdd.dbo.InventoryItem x
-			JOIN [CBERP\CBERPSQL].acdd.dbo.InventoryItemDescription d ON x.ItemCode = d.ItemCode
+			acdd.dbo.InventoryItem x
+			JOIN acdd.dbo.InventoryItemDescription d ON x.ItemCode = d.ItemCode
 		WHERE
 			x.ItemName = ltrim(rtrim(i.ITEM))
 	) AS 'ItemDescription',
@@ -156,8 +156,8 @@ COGSAccountCode
 		SELECT
 			d.ItemDescription
 		FROM
-			[CBERP\CBERPSQL].acdd.dbo.InventoryItem x
-			JOIN [CBERP\CBERPSQL].acdd.dbo.InventoryItemDescription d ON x.ItemCode = d.ItemCode
+			acdd.dbo.InventoryItem x
+			JOIN acdd.dbo.InventoryItemDescription d ON x.ItemCode = d.ItemCode
 		WHERE
 			x.ItemName = ltrim(rtrim(i.ITEM))
 	) AS 'InventoryDescription',

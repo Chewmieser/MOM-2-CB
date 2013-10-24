@@ -13,7 +13,7 @@ SELECT
 		SELECT
 			i.ItemCode
 		FROM
-			[CBERP\CBERPSQL].acdd.dbo.InventoryItem i
+			acdd.dbo.InventoryItem i
 		WHERE
 			i.ItemName = rtrim(ltrim(s.NUMBER))
 	) AS 'ItemCode',
@@ -22,7 +22,7 @@ SELECT
 		SELECT
 			c.SupplierCode
 		FROM
-			[CBERP\CBERPSQL].acdd.dbo.Supplier c
+			acdd.dbo.Supplier c
 		WHERE
 			c.SupplierLegacyCode = rtrim(ltrim(s.SUPPLIER))
 	) AS 'SupplierCode',
@@ -38,7 +38,7 @@ SELECT
 		SELECT
 			c.SupplierName
 		FROM
-			[CBERP\CBERPSQL].acdd.dbo.Supplier c
+			acdd.dbo.Supplier c
 		WHERE
 			c.SupplierLegacyCode = rtrim(ltrim(s.SUPPLIER))
 	) AS 'ShipFromName',

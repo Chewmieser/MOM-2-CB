@@ -15,7 +15,7 @@ SELECT
 		SELECT
 			i.ItemCode
 		FROM
-			[CBERP\CBERPSQL].acdd.dbo.InventoryItem i
+			acdd.dbo.InventoryItem i
 		WHERE
 			i.ItemName = rtrim(ltrim(s.NUMBER))
 	) AS 'ItemCode',
