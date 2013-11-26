@@ -31,7 +31,7 @@ SELECT
 	'MAIN' AS 'WarehouseCode',
 	i.QUANTO AS 'QuantityOrdered',
 	'EACH' AS 'UnitMeasureCode',
-SalesAccountCode
+	'4000-1' AS 'SalesAccountCode',
 	i.ORDERNO AS 'SourceSalesOrderCode',
 	i.SEQ AS 'SourceLineNum',
 
@@ -103,12 +103,12 @@ SalesAccountCode
 	(i.IT_UNLIST - i.IT_UNCOST) * i.QUANTO AS 'ProfitRate',
 	'Sales No Tax' AS 'TaxCode',
 	((i.IT_UNLIST - i.IT_UNCOST) * i.QUANTO) / (i.IT_UNCOST * i.QUANTO) AS 'Margin',
-Pricing /* Retail / Wholesale / Price list */
+	'Retail' AS 'Pricing', /* Retail / Wholesale / Price list */
 	i.DROPSHIP AS 'IsDropShip',
 DropShipReference /* Needs PO conversion */
-InventoryAccountCode
+	'1200-1' AS 'InventoryAccountCode',
 	0 AS 'MatrixBatch',
-COGSAccountCode
+	'5000-1' AS 'COGSAccountCode',
 	'Stock' AS 'ItemType',
 	0.00 AS 'Volume',
 	0.00 AS 'Weight',

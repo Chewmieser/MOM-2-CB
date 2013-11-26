@@ -119,91 +119,12 @@ SELECT
 	NULL AS 'WebPassword',
 	NULL AS 'Pricing',
 	
-	/* Merge sub-account credit limit */
-	(
-		SELECT
-			SUM(v.CREDIT_LIM)
-		FROM
-			(
-				SELECT DISTINCT
-					/* Keeps distinct check */
-					CASE WHEN d.CUSTNUM = c.CUSTNUM
-						THEN d.BELONGNUM
-						ELSE d.CUSTNUM
-						END AS NUM,
-					a.CREDIT_LIM
-				FROM
-					[MailOrderManager].[dbo].[CUSTRELA] d JOIN
-					[MailOrderManager].[dbo].[CUST] a ON (CASE WHEN d.CUSTNUM = c.CUSTNUM THEN d.BELONGNUM ELSE d.CUSTNUM END) = a.CUSTNUM
-				WHERE
-					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-			) v
-	) + c.CREDIT_LIM AS 'CreditLimit',
-	
-	/* Merge sub-account credit */
-	(
-		SELECT
-			SUM(v.AR_BALANCE)
-		FROM
-			(
-				SELECT DISTINCT
-					/* Keeps distinct check */
-					CASE WHEN d.CUSTNUM = c.CUSTNUM
-						THEN d.BELONGNUM
-						ELSE d.CUSTNUM
-						END AS NUM,
-					a.AR_BALANCE
-				FROM
-					[MailOrderManager].[dbo].[CUSTRELA] d JOIN
-					[MailOrderManager].[dbo].[CUST] a ON (CASE WHEN d.CUSTNUM = c.CUSTNUM THEN d.BELONGNUM ELSE d.CUSTNUM END) = a.CUSTNUM
-				WHERE
-					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-			) v
-	) + c.AR_BALANCE AS 'CustomerBalance',
+	c.CREDIT_LIM AS 'CreditLimit',
+	c.AR_BALANCE AS 'CustomerBalance',
 	
 	0.00 AS 'PricingPercent',
-	
-	/* Merge is active */
-	CASE WHEN ((
-		SELECT
-			SUM(v.BADCHECK)
-		FROM
-			(
-				SELECT DISTINCT
-					/* Keeps distinct check */
-					CASE WHEN d.CUSTNUM = c.CUSTNUM
-						THEN d.BELONGNUM
-						ELSE d.CUSTNUM
-						END AS NUM,
-					CAST(a.BADCHECK AS INT) AS BADCHECK
-				FROM
-					[MailOrderManager].[dbo].[CUSTRELA] d JOIN
-					[MailOrderManager].[dbo].[CUST] a ON (CASE WHEN d.CUSTNUM = c.CUSTNUM THEN d.BELONGNUM ELSE d.CUSTNUM END) = a.CUSTNUM
-				WHERE
-					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-			) v
-	) + CAST(c.BADCHECK AS INT)) > 0 THEN 0 ELSE 1 END AS 'IsActive',
-	
-	/* Merge credit hold */
-	CASE WHEN ((
-		SELECT
-			SUM(v.BADCHECK)
-		FROM
-			(
-				SELECT DISTINCT
-					/* Keeps distinct check */
-					CASE WHEN d.CUSTNUM = c.CUSTNUM
-						THEN d.BELONGNUM
-						ELSE d.CUSTNUM
-						END AS NUM,
-					CAST(a.BADCHECK AS INT) AS BADCHECK
-				FROM
-					[MailOrderManager].[dbo].[CUSTRELA] d JOIN
-					[MailOrderManager].[dbo].[CUST] a ON (CASE WHEN d.CUSTNUM = c.CUSTNUM THEN d.BELONGNUM ELSE d.CUSTNUM END) = a.CUSTNUM
-				WHERE
-					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-			) v
-	) + CAST(c.BADCHECK AS INT)) > 0 THEN 1 ELSE 0 END AS 'IsCreditHold',
+	~c.BADCHECK AS 'IsActive',
+	c.BADCHECK AS 'IsCreditHold',
 	
 	CASE c.CUSTTYPE
 		WHEN 'P' THEN 1
@@ -271,26 +192,7 @@ SELECT
 		ELSE NULL
 		END AS 'BusinessType',
 	
-	/* Merge sub-account balance */
-	(
-		SELECT
-			SUM(v.CUSTBAL)
-		FROM
-			(
-				SELECT DISTINCT
-					/* Keeps distinct check */
-					CASE WHEN d.CUSTNUM = c.CUSTNUM
-						THEN d.BELONGNUM
-						ELSE d.CUSTNUM
-						END AS NUM,
-					a.CUSTBAL
-				FROM
-					[MailOrderManager].[dbo].[CUSTRELA] d JOIN
-					[MailOrderManager].[dbo].[CUST] a ON (CASE WHEN d.CUSTNUM = c.CUSTNUM THEN d.BELONGNUM ELSE d.CUSTNUM END) = a.CUSTNUM
-				WHERE
-					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-			) v
-	) + c.CUSTBAL AS 'Credit',
+	c.CUSTBAL AS 'Credit',
 	
 	NULL AS 'GiftRegistryGUID',
 	NULL AS 'CustomerBalanceRate',
@@ -334,7 +236,14 @@ SELECT
 	NULL AS 'ProductFilterTemplateNamePricingImport',
 	NULL AS 'ImportSourceID_DEV000221',
 	NULL AS 'ImportSourceBuyerID_DEV000221'
-FROM MailOrderManager.dbo.CUST c /* Primary MOM DB */
+FROM
+	(
+		SELECT DISTINCT
+			CUSTNUM
+		FROM
+			MailOrderManager.dbo.CMS
+	) x
+JOIN MailOrderManager.dbo.CUST c ON x.CUSTNUM = c.CUSTNUM /* Primary MOM DB */
 JOIN momscripts.dbo.MomCustSanitized s ON c.CUSTNUM = s.CustomerID /* Sanitized data for addresses */
 WHERE
 
@@ -346,53 +255,5 @@ WHERE
 			acdd.dbo.Customer z
 		WHERE
 			z.CustomerLegacyCode = c.CUSTNUM
-	) AND (
-		
-		/* CUSTNUMs with no references at all */
-		(
-			SELECT
-				COUNT(d.CUSTNUM)
-			FROM
-				[MailOrderManager].[dbo].[CUSTRELA] d
-			WHERE
-				d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-		) = 0
-	
-		OR
-	
-		/* ONLY pull original accounts, cross-referencing CUSTRELA and filtering out the rest with cust.BELONGNUM */
-		(
-			SELECT DISTINCT
-				/* Fetch overall smallest number - Relationships to 0 will cause this to fail */
-				CASE WHEN (MIN(d.CUSTNUM) IS NULL) AND (MIN(d.BELONGNUM) IS NULL)
-					THEN c.CUSTNUM
-					ELSE (
-						CASE WHEN (
-							CASE WHEN MIN(d.CUSTNUM) IS NULL
-								THEN 100000
-								ELSE MIN(d.CUSTNUM)
-								END
-							) <= (
-							CASE WHEN MIN(d.BELONGNUM) IS NULL
-								THEN 100000
-								ELSE MIN(d.BELONGNUM)
-								END
-							)
-						THEN MIN(d.CUSTNUM)
-						ELSE MIN(d.BELONGNUM)
-						END
-					) END
-			FROM
-				[MailOrderManager].[dbo].[CUSTRELA] d
-			WHERE
-				d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-
-			/*
-			-- Omitted for SQL 2008 - Using DISTINCT --
-		
-			GROUP BY
-				c.CUSTNUM
-			*/
-		) = c.CUSTNUM
-	)
+	) = 0
 ORDER BY c.CUSTNUM ASC

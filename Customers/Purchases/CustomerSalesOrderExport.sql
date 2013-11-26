@@ -11,7 +11,7 @@
 SELECT
 	CASE ltrim(rtrim(s.PAYMETHOD))
 		WHEN 'CC' THEN 'Credit Card'
-		ELSE 'NET'+s.DUEDAYS
+		ELSE 'NET'+CONVERT(varchar(3), s.DUE_DAYS)
 		END AS 'PaymentTermCode',
 
 	CASE ltrim(rtrim(s.SHIPLIST))
@@ -44,9 +44,27 @@ SELECT
 	
 	'DEFAULT' AS 'ShippingMethodGroup',
 	
-	/* Will be generated */
-	NULL AS 'ShipToCode',
-	NULL AS 'BillToCode',
+	(
+		SELECT
+			z.ShipToCode
+		FROM
+			acdd.dbo.CustomerShipTo z
+		WHERE
+			CASE WHEN ((s.SHIPNUM = 0) OR (s.SHIPNUM IS NULL))
+				THEN s.CUSTNUM
+				ELSE s.SHIPNUM
+				END = z.ShipToLegacyCode
+	) AS 'ShipToCode',
+	
+	(
+		SELECT
+			z.CustomerCode
+		FROM
+			acdd.dbo.Customer z
+		WHERE
+			z.CustomerLegacyCode = s.CUSTNUM
+	) AS 'BillToCode',
+	
 	NULL AS 'SalesOrderCode',
 	NULL AS 'ContactCode',
 	
@@ -56,10 +74,10 @@ SELECT
 	'Sales Order' AS 'Type',
 	'Sales' AS 'ApplyTo',
 	
-	ARAccountCode
-	DiscountAccountCode
-	FreightAccountCode
-	OtherAccountCode
+	'1100-0' AS 'ARAccountCode',
+	'4000-1' AS 'DiscountAccountCode',
+	'4100-1' AS 'FreightAccountCode',
+	'7100-0' AS 'OtherAccountCode',
 
 	NULL AS 'DiscountType',
 	'Sales No Tax' AS 'FreightTaxCode',
@@ -80,7 +98,7 @@ SELECT
 	'MAIN' AS 'WarehouseCode',
 	s.ORDERNO AS 'SourceSalesOrderCode',
 	NULL AS 'RootDocumentCode',
-	s.ORD_DATE AS 'SalesOrderDate',
+	s.ODR_DATE AS 'SalesOrderDate',
 	NULL AS 'ProjectCode',
 	s.ORD_TOTAL - (s.OTHERCOST + s.SHIPPING + s.TAX) AS 'SubTotal',
 	s.ORD_TOTAL - (s.OTHERCOST + s.SHIPPING + s.TAX) AS 'SubTotalRate',
@@ -94,8 +112,8 @@ SELECT
 	s.ORD_TOTAL AS 'TotalRate',
 	s.PONUMBER AS 'POCode',
 	NULL AS 'SalesRepOrderCode',
-	s.ORD_DATE AS 'PODate',
-	dateadd(day, s.DUE_DAYS, s.ORD_DATE) AS 'DueDate',
+	s.ODR_DATE AS 'PODate',
+	dateadd(day, s.DUE_DAYS, s.ODR_DATE) AS 'DueDate',
 	NULL AS 'CancelDate',
 	s.CHECKAMOUN AS 'AmountPaid',
 	s.CHECKAMOUN AS 'AmountPaidRate',
@@ -105,7 +123,7 @@ SELECT
 		ELSE 0
 		END AS 'IsPaid',
 	
-	s.DUEDAYS AS 'DaysBeforeInterest',
+	s.DUE_DAYS AS 'DaysBeforeInterest',
 	1 AS 'DiscountableDays',
 	0.00 AS 'DiscountPercent',
 	0.00 AS 'InterestPercent',
@@ -113,7 +131,7 @@ SELECT
 	NULL AS 'StartDate',
 	NULL AS 'DatePaid',
 	
-	CASE s.ORD_ST2
+	CASE s.ORDER_ST2
 		WHEN 'BI' THEN 'Open' /* Ready to invoice */
 		WHEN 'BO' THEN 'Open' /* Back-ordered */
 		WHEN 'CD' THEN 'Voided' /* Credit denied - Suspended */
@@ -137,7 +155,14 @@ SELECT
 		THEN master.dbo.udf_TitleCase(ltrim(rtrim(s.CARDHOLDER)))
 		ELSE (master.dbo.udf_TitleCase(LTRIM(RTRIM(c.FIRSTNAME))) + ' ' + master.dbo.udf_TitleCase(LTRIM(RTRIM(c.LASTNAME))))*/
 
-	BillToName
+	(
+		SELECT
+			z.CustomerName
+		FROM
+			acdd.dbo.Customer z
+		WHERE
+			z.CustomerLegacyCode = s.CUSTNUM
+	) AS 'BillToName',
 	
 	/* Combine address lines */
 	CASE WHEN bs.DeliveryLine1 IS NULL /* Fallback to MOM data */
@@ -149,7 +174,7 @@ SELECT
 			ELSE ltrim(rtrim(b.ADDR)) + CHAR(13) + CHAR(10) + ltrim(rtrim(b.ADDR2))
 			END
 		ELSE CASE WHEN bs.DeliveryLine2 IS NULL
-			THEN CASE WHEN b.DeliveryLine1 IS NULL
+			THEN CASE WHEN bs.DeliveryLine1 IS NULL
 				THEN NULL
 				ELSE bs.DeliveryLine1
 				END
@@ -174,7 +199,17 @@ SELECT
 		ELSE NULL
 		END AS 'BillToCountry',
 		
-	ShipToName
+	(
+		SELECT
+			z.ShipToName
+		FROM
+			acdd.dbo.CustomerShipTo z
+		WHERE
+			CASE WHEN ((s.SHIPNUM = 0) OR (s.SHIPNUM IS NULL))
+				THEN s.CUSTNUM
+				ELSE s.SHIPNUM
+				END = z.ShipToLegacyCode
+	) AS 'ShipToName',
 	
 	/* Combine address lines */
 	CASE WHEN hs.DeliveryLine1 IS NULL /* Fallback to MOM data */
@@ -226,25 +261,25 @@ SELECT
 	s.OTHERCOST AS 'OtherRate',
 	NULL AS 'OtherName',
 	0.00 AS 'OtherTax',
-	'Sales No Tax' AS 'OtherTaxRate',
+	0.00 AS 'OtherTaxRate', /* Invalid - Sales No Tax */
 	
 	(
 		SELECT
-			ltrim(rtrim(o.NOTES)) + CHAR(13) + CHAR(10) + CHAR(13) + CHAR(10) + 
-			ltrim(rtrim(o.FULFILL)) + CHAR(13) + CHAR(10) + CHAR(13) + CHAR(10) + 
-			ltrim(rtrim(o.DESC1)) + CHAR(13) + CHAR(10) + 
-			ltrim(rtrim(o.DESC2)) + CHAR(13) + CHAR(10) + 
-			ltrim(rtrim(o.DESC3)) + CHAR(13) + CHAR(10) + 
-			ltrim(rtrim(o.DESC4)) + CHAR(13) + CHAR(10) + 
-			ltrim(rtrim(o.DESC5)) + CHAR(13) + CHAR(10) + 
-			ltrim(rtrim(o.DESC6))
+			ltrim(rtrim(CONVERT(varchar(100), o.NOTES))) + CHAR(13) + CHAR(10) + CHAR(13) + CHAR(10) + 
+			ltrim(rtrim(CONVERT(varchar(100), o.FULFILL))) + CHAR(13) + CHAR(10) + CHAR(13) + CHAR(10) + 
+			ltrim(rtrim(CONVERT(varchar(100), o.DESC1))) + CHAR(13) + CHAR(10) + 
+			ltrim(rtrim(CONVERT(varchar(100), o.DESC2))) + CHAR(13) + CHAR(10) + 
+			ltrim(rtrim(CONVERT(varchar(100), o.DESC3))) + CHAR(13) + CHAR(10) + 
+			ltrim(rtrim(CONVERT(varchar(100), o.DESC4))) + CHAR(13) + CHAR(10) + 
+			ltrim(rtrim(CONVERT(varchar(100), o.DESC5))) + CHAR(13) + CHAR(10) + 
+			ltrim(rtrim(CONVERT(varchar(100), o.DESC6)))
 		FROM
 			[MailOrderManager].[dbo].[ORDMEMO] o
 		WHERE
 			o.ORDERNO = s.ORDERNO
 	) AS 'Notes',
 	
-	CASE s.ORD_ST2
+	CASE s.ORDER_ST2
 		WHEN 'CD' THEN 1 /* Credit denied - Suspended */
 		WHEN 'CN' THEN 1 /* Canceled */
 		WHEN 'GD' THEN 1 /* Google Checkout - Canceled */
@@ -252,7 +287,7 @@ SELECT
 		ELSE 0
 		END AS 'IsVoided',
 	
-	IsOnHold
+	0 AS 'IsOnHold',
 	
 	CASE WHEN s.SHIP_DATE IS NOT NULL
 		THEN 1
@@ -269,7 +304,7 @@ SELECT
 	NULL AS 'RecurDocumentCode',
 	
 	(
-		SELECT
+		SELECT TOP 1
 			ltrim(rtrim(c.PROMO_CODE))
 		FROM
 			[MailOrderManager].[dbo].[ORDTOOLS] c
@@ -280,7 +315,7 @@ SELECT
 	NULL AS 'CouponType',
 	
 	(
-		SELECT
+		SELECT TOP 1
 			ltrim(rtrim(c.PROMO_CODE))
 		FROM
 			[MailOrderManager].[dbo].[ORDTOOLS] c
@@ -289,7 +324,7 @@ SELECT
 	) AS 'CouponID',
 	
 	(
-		SELECT
+		SELECT TOP 1
 			c.AMOUNT
 		FROM
 			[MailOrderManager].[dbo].[ORDTOOLS] c
@@ -298,7 +333,7 @@ SELECT
 	) AS 'CouponDiscount',
 	
 	(
-		SELECT
+		SELECT TOP 1
 			c.AMOUNT
 		FROM
 			[MailOrderManager].[dbo].[ORDTOOLS] c
@@ -309,10 +344,10 @@ SELECT
 	'Amount' AS 'CouponDiscountType',
 	NULL AS 'CouponDiscountPercent',
 	NULL AS 'CouponDiscountAmount',	
-	~s.NO_PROMO AS 'CouponUsage',
+	~s.NO_PROMO AS 'CouponUsage', /* Invalid */
 	
 	(
-		SELECT
+		SELECT TOP 1
 			CASE WHEN ltrim(rtrim(c.SHIP_VIA)) IS NOT NULL
 				THEN 1
 				ELSE 0
@@ -324,7 +359,7 @@ SELECT
 	) AS 'CouponDiscountIncludesFreeShipping',
 	
 	0 AS 'CouponRequiresMinimumOrderAmount',
-	IsFreightOverwrite
+	0 AS 'IsFreightOverwrite',
 	NULL AS 'WebSiteCode',
 	NULL AS 'WaveCode',
 	NULL AS 'SourceType',
@@ -365,7 +400,7 @@ SELECT
 	
 	(
 		SELECT
-			r.RMA_TOTAL
+			SUM(r.RMA_TOTAL)
 		FROM
 			[MailOrderManager].[dbo].[RMA] r
 		WHERE
@@ -374,7 +409,7 @@ SELECT
 	
 	(
 		SELECT
-			r.RMA_TOTAL
+			SUM(r.RMA_TOTAL)
 		FROM
 			[MailOrderManager].[dbo].[RMA] r
 		WHERE
@@ -393,7 +428,7 @@ SELECT
 	NULL AS 'ShipToAddressType',
 	NULL AS 'WarehouseAddressType',
 	NULL AS 'IsBlindShip',
-	IsFreightQuoted
+	1 AS 'IsFreightQuoted',
 	NULL AS 'Signature',
 	NULL AS 'SignatureSVG',
 	NULL AS 'CBNMasterID',

@@ -56,10 +56,10 @@ SELECT
 	'Sales Order' AS 'Type',
 	'Sales' AS 'ApplyTo',
 	
-	ARAccountCode
-	DiscountAccountCode
-	FreightAccountCode
-	OtherAccountCode
+	'1100-0' AS 'ARAccountCode',
+	'7100-1' AS 'DiscountAccountCode',
+	'4100-1' AS 'FreightAccountCode',
+	'4000-1' AS 'OtherAccountCode',
 
 	NULL AS 'DiscountType',
 	'Sales No Tax' AS 'FreightTaxCode',

@@ -8,45 +8,14 @@
 
  */
 
-SELECT
+SELECT TOP 500
 	(
 		SELECT
 			z.CustomerCode
 		FROM
 			acdd.dbo.Customer z
 		WHERE
-			(
-				SELECT DISTINCT
-					CASE WHEN (MIN(d.CUSTNUM) IS NULL) AND (MIN(d.BELONGNUM) IS NULL)
-						THEN c.CUSTNUM
-						ELSE (
-							CASE WHEN (
-								CASE WHEN MIN(d.CUSTNUM) IS NULL
-									THEN 100000
-									ELSE MIN(d.CUSTNUM)
-									END
-								) <= (
-								CASE WHEN MIN(d.BELONGNUM) IS NULL
-									THEN 100000
-									ELSE MIN(d.BELONGNUM)
-									END
-								)
-							THEN MIN(d.CUSTNUM)
-							ELSE MIN(d.BELONGNUM)
-							END
-						) END
-				FROM
-					[MailOrderManager].[dbo].[CUSTRELA] d
-				WHERE
-					d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-				
-				/*
-				-- Omitted for SQL 2008 - Using DISTINCT --
-
-				GROUP BY
-					c.CUSTNUM
-				*/
-			) = z.CustomerLegacyCode
+			z.CustomerLegacyCode = x.CUSTNUM
 	) AS 'CustomerCode',
 
 	NULL AS 'ShipToCode',
@@ -81,7 +50,7 @@ SELECT
 	'USD' AS 'CurrencyCode',
 	'Default' AS 'GLClassCode',
 	'None' AS 'PricingMethod',
-	c.CUSTNUM AS 'ShipToLegacyCode',
+	x.SHIPNUM AS 'ShipToLegacyCode',
 
 	/* Combine address lines */
 	CASE WHEN s.DeliveryLine1 IS NULL /* Fallback to MOM data */
@@ -168,62 +137,38 @@ SELECT
 	NULL AS 'BusinessLicense',
 	NULL AS 'AddressType',
 	s.AddonCode AS 'Plus4'
-FROM MailOrderManager.dbo.CUST c /* Primary MOM DB */
-JOIN momscripts.dbo.MomCustSanitized s ON c.CUSTNUM = s.CustomerID /* Sanitized data for addresses */
-WHERE 
-	/* CUSTNUMs with references */
-	(
-		SELECT
-			COUNT(d.CUSTNUM)
-		FROM
-			[MailOrderManager].[dbo].[CUSTRELA] d
-		WHERE
-			d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-	) > 0
-	
-	AND
-	
-	/* CUSTNUMs that can be traced to an earlier account */
+FROM
 	(
 		SELECT DISTINCT
-			CASE WHEN (MIN(d.CUSTNUM) IS NULL) AND (MIN(d.BELONGNUM) IS NULL)
-				THEN c.CUSTNUM
-				ELSE (
-					CASE WHEN (
-						CASE WHEN MIN(d.CUSTNUM) IS NULL
-							THEN 100000
-							ELSE MIN(d.CUSTNUM)
-							END
-						) <= (
-						CASE WHEN MIN(d.BELONGNUM) IS NULL
-							THEN 100000
-							ELSE MIN(d.BELONGNUM)
-							END
-						)
-					THEN MIN(d.CUSTNUM)
-					ELSE MIN(d.BELONGNUM)
-					END
-				) END
+			CASE WHEN ((z.SHIPNUM = 0) OR (z.SHIPNUM IS NULL))
+				THEN z.CUSTNUM
+				ELSE z.SHIPNUM
+				END AS SHIPNUM,
+			z.CUSTNUM
 		FROM
-			[MailOrderManager].[dbo].[CUSTRELA] d
+			MailOrderManager.dbo.CMS z
+	) x
+JOIN MailOrderManager.dbo.CUST c ON x.SHIPNUM = c.CUSTNUM /* Primary MOM DB */
+JOIN momscripts.dbo.MomCustSanitized s ON c.CUSTNUM = s.CustomerID /* Sanitized data for addresses */
+WHERE
+	(
+		SELECT
+			z.CustomerCode
+		FROM
+			acdd.dbo.Customer z
 		WHERE
-			d.CUSTNUM = c.CUSTNUM OR d.BELONGNUM = c.CUSTNUM
-
-		/*
-		-- Omitted for SQL 2008 - Using DISTINCT --
+			z.CustomerLegacyCode = x.CUSTNUM
+	) IS NOT NULL
 	
-		GROUP BY
-			c.CUSTNUM
-		*/
-	) < c.CUSTNUM
-
 	AND
 
+	/* Hasn't been imported */
 	(
-		c.CUSTTYPE = 'S' /* Ship-to Address */
-
-		OR
-
-		c.ADDR_TYPE = 'S' /* Ship-to Customer */
-	)
+		SELECT
+			COUNT(z.ShipToLegacyCode)
+		FROM
+			acdd.dbo.CustomerShipTo z
+		WHERE
+			z.ShipToLegacyCode = x.SHIPNUM
+	) = 0
 ORDER BY c.CUSTNUM ASC

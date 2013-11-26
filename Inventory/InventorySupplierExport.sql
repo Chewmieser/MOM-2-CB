@@ -7,41 +7,54 @@
  +-----------------------------------------------------------------+
 
  */
-
+ITEM-001970, SUP-000024, MAIN, SFRM-000024
 SELECT
-	(
+	ltrim(rtrim((
 		SELECT
 			i.ItemCode
 		FROM
 			acdd.dbo.InventoryItem i
 		WHERE
 			i.ItemName = rtrim(ltrim(s.NUMBER))
-	) AS 'ItemCode',
+	))) AS 'ItemCode',
 	
-	(
+	ltrim(rtrim((
 		SELECT
 			c.SupplierCode
 		FROM
 			acdd.dbo.Supplier c
 		WHERE
-			c.SupplierLegacyCode = rtrim(ltrim(s.SUPPLIER))
-	) AS 'SupplierCode',
+			c.SupplierLegacyCode = rtrim(ltrim(s.SUPPLIER))+(CASE WHEN s.DROPSHIP = 1 THEN '-DS' ELSE '' END)
+	))) AS 'SupplierCode',
 	
 	'MAIN' AS 'WarehouseCode',
 	'EACH' AS 'UnitMeasureCode',
 	'USD' AS 'CurrencyCode',
 	
-	/* Will be populated by later query */
-	NULL AS 'ShipFromCode',
+	ltrim(rtrim((
+		SELECT
+			x.ShipFromCode
+		FROM
+			acdd.dbo.SupplierShipFrom x
+		WHERE
+			x.SupplierCode = (
+				SELECT
+					c.SupplierCode
+				FROM
+					acdd.dbo.Supplier c
+				WHERE
+					c.SupplierLegacyCode = rtrim(ltrim(s.SUPPLIER))+(CASE WHEN s.DROPSHIP = 1 THEN '-DS' ELSE '' END)
+			)
+	))) AS 'ShipFromCode',
 	
-	(
+	ltrim(rtrim((
 		SELECT
 			c.SupplierName
 		FROM
 			acdd.dbo.Supplier c
 		WHERE
-			c.SupplierLegacyCode = rtrim(ltrim(s.SUPPLIER))
-	) AS 'ShipFromName',
+			c.SupplierLegacyCode = rtrim(ltrim(s.SUPPLIER))+(CASE WHEN s.DROPSHIP = 1 THEN '-DS' ELSE '' END)
+	))) AS 'ShipFromName',
 	
 	s.BUYDESC AS 'PartCode',
 	NULL AS 'ManufacturerID',
@@ -81,4 +94,5 @@ SELECT
 	NULL AS 'IsTemp',
 	0 AS 'PerItemFeeRate',
 	NULL AS 'ShipFromPlus4'
-FROM [MailOrderManager].[dbo].[BUYPRICE] s
+FROM
+	[MailOrderManager].[dbo].[BUYPRICE] s
