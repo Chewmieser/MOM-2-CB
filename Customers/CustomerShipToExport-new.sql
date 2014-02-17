@@ -8,7 +8,7 @@
 
  */
 
-SELECT TOP 500
+SELECT
 	(
 		SELECT
 			z.CustomerCode
@@ -157,7 +157,7 @@ WHERE
 		FROM
 			acdd.dbo.Customer z
 		WHERE
-			z.CustomerLegacyCode = x.CUSTNUM
+			z.CustomerLegacyCode = CAST(x.CUSTNUM AS VARCHAR(50))
 	) IS NOT NULL
 	
 	AND
@@ -169,6 +169,6 @@ WHERE
 		FROM
 			acdd.dbo.CustomerShipTo z
 		WHERE
-			z.ShipToLegacyCode = x.SHIPNUM
+			z.ShipToLegacyCode = CAST(x.SHIPNUM AS VARCHAR(50))
 	) = 0
 ORDER BY c.CUSTNUM ASC
